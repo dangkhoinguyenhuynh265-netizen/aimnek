@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Nynox Hub // FF Panel</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+    --bg:#020607;
+    --panel:rgba(3,15,18,.95);
+    --neon:#00ffd5;
+    --dim:#08766d;
+    --text:#d9fff8;
+}
+
+html,body{
+    min-height:100%;
+    background:var(--bg);
+    color:var(--text);
+    font-family:Consolas,monospace;
+}
+
+body{
+    overflow-x:hidden;
+}
+
+#matrix{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:0;
+    opacity:.17;
+}
+
+.scan{
+    position:fixed;
+    inset:0;
+    z-index:1;
+    pointer-events:none;
+    background:repeating-linear-gradient(
+        0deg,
+        transparent 0,
+        transparent 3px,
+        rgba(0,255,213,.025) 4px
+    );
+}
+
+.app{
+    position:relative;
+    z-index:5;
+    width:min(900px,calc(100% - 20px));
+    margin:15px auto 40px;
+}
+
+header,
+.card,
+.terminal{
+    border:1px solid var(--dim);
+    background:var(--panel);
+    box-shadow:
+        0 0 15px rgba(0,255,213,.08),
+        inset 0 0 30px rgba(0,255,213,.025);
+}
+
+header{
+    padding:25px 20px;
+    border-color:var(--neon);
+}
+
+.logo{
+    font-size:clamp(30px,8vw,58px);
+    font-weight:900;
+    color:var(--neon);
+    letter-spacing:4px;
+    text-shadow:0 0 20px rgba(0,255,213,.7);
+}
+
+.sub{
+    margin-top:8px;
+    color:#57938c;
+    font-size:11px;
+    letter-spacing:2px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin-top:14px;
+}
+
+.card{
+    padding:20px;
+}
+
+.title{
+    color:var(--neon);
+    font-weight:bold;
+    letter-spacing:2px;
+    margin-bottom:18px;
+}
+
+.row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    min-height:52px;
+    border-bottom:1px solid rgba(0,255,213,.08);
+}
+
+.switch{
+    width:50px;
+    height:26px;
+    padding:3px;
+    border:1px solid #087d73;
+    cursor:pointer;
+}
+
+.switch:before{
+    content:"";
+    display:block;
+    width:18px;
+    height:18px;
+    background:#294844;
+    transition:.2s;
+}
+
+.switch.active{
+    border-color:var(--neon);
+    box-shadow:0 0 12px rgba(0,255,213,.5);
+}
+
+.switch.active:before{
+    transform:translateX(22px);
+    background:var(--neon);
+    box-shadow:0 0 10px var(--neon);
+}
+
+.fovbox{
+    height:220px;
+    display:grid;
+    place-items:center;
+}
+
+.fov{
+    width:170px;
+    height:170px;
+    border:2px solid var(--neon);
+    border-radius:50%;
+    position:relative;
+    box-shadow:
+        0 0 10px var(--neon),
+        inset 0 0 25px rgba(0,255,213,.08);
+}
+
+.fov:before,
+.fov:after{
+    content:"";
+    position:absolute;
+    background:var(--neon);
+}
+
+.fov:before{
+    width:100%;
+    height:1px;
+    top:50%;
+}
+
+.fov:after{
+    width:1px;
+    height:100%;
+    left:50%;
+}
+
+.center{
+    position:absolute;
+    width:7px;
+    height:7px;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    background:#001311;
+    border:1px solid var(--neon);
+    box-shadow:0 0 10px var(--neon);
+}
+
+input[type=range]{
+    width:100%;
+    accent-color:var(--neon);
+}
+
+.value{
+    display:flex;
+    justify-content:space-between;
+    color:#659993;
+    font-size:12px;
+    margin-bottom:8px;
+}
+
+.launch{
+    margin-top:14px;
+    padding:20px;
+    border:1px solid var(--neon);
+    background:var(--panel);
+}
+
+button{
+    width:100%;
+    padding:17px;
+    border:1px solid var(--neon);
+    background:#032824;
+    color:var(--neon);
+    font-family:inherit;
+    font-weight:bold;
+    letter-spacing:1.5px;
+    cursor:pointer;
+    transition:.2s;
+}
+
+button:hover{
+    box-shadow:0 0 20px rgba(0,255,213,.4);
+}
+
+button:active{
+    transform:scale(.98);
+}
+
+.ff{
+    margin-bottom:10px;
+    background:linear-gradient(90deg,#043a32,#00a98f,#043a32);
+    color:#00110e;
+    border-color:#00ffd5;
+}
+
+.terminal{
+    margin-top:12px;
+    padding:14px;
+    min-height:100px;
+    font-size:11px;
+    line-height:1.8;
+    color:#5f9991;
+}
+
+.ok{color:#57ffc2}
+.warn{color:#ffc857}
+
+@media(max-width:650px){
+    .grid{grid-template-columns:1fr}
+    .app{width:calc(100% - 14px)}
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="matrix"></canvas>
+<div class="scan"></div>
+
+<main class="app">
+
+<header>
+    <div class="logo">NYNOX HUB</div>
+    <div class="sub">
+        FREE FIRE // CYBERPUNK CONTROL PANEL
+    </div>
+</header>
+
+<section class="grid">
+
+<div class="card">
+    <div class="title">// AIM CONFIG</div>
+
+    <div class="row">
+        <span>AIMLOCK</span>
+        <div class="switch" data-name="AIMLOCK"></div>
+    </div>
+
+    <div class="row">
+        <span>NO RECOIL</span>
+        <div class="switch" data-name="NO RECOIL"></div>
+    </div>
+
+    <div class="row">
+        <span>AIM STABILITY</span>
+        <div class="switch" data-name="AIM STABILITY"></div>
+    </div>
+
+    <div class="row">
+        <span>HEAD FOCUS</span>
+        <div class="switch" data-name="HEAD FOCUS"></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="title">// FOV SYSTEM</div>
+
+    <div class="fovbox">
+        <div class="fov" id="fov">
+            <div class="center"></div>
+        </div>
+    </div>
+
+    <div class="value">
+        <span>FOV</span>
+        <span id="fovValue">180°</span>
+    </div>
+
+    <input
+        id="range"
+        type="range"
+        min="60"
+        max="360"
+        value="180">
+</div>
+
+</section>
+
+<section class="launch">
+
+    <button class="ff" id="launch">
+        ▶ MỞ FREE FIRE
+    </button>
+
+    <button id="activate">
+        KÍCH HOẠT GIAO DIỆN
+    </button>
+
+    <div class="terminal" id="terminal">
+        <div class="ok">[SYSTEM] NYNOX HUB INITIALIZED</div>
+        <div>[SYSTEM] Waiting for operator...</div>
+    </div>
+
+</section>
+
+</main>
+
+<script>
+"use strict";
+
+/* MATRIX */
+
+const canvas=document.getElementById("matrix");
+const ctx=canvas.getContext("2d");
+
+const chars=
+"01ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+"アイウエオカキクケコ" +
+"#$%&@<>[]{}";
+
+let drops=[];
+let columns=0;
+
+function resize(){
+    canvas.width=innerWidth;
+    canvas.height=innerHeight;
+
+    columns=Math.ceil(innerWidth/14);
+
+    drops=Array.from(
+        {length:columns},
+        ()=>Math.random()*-50
+    );
+}
+
+function matrix(){
+    ctx.fillStyle="rgba(2,6,7,.09)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    ctx.font="14px monospace";
+
+    for(let i=0;i<drops.length;i++){
+
+        const char=
+            chars[
+                Math.floor(
+                    Math.random()*chars.length
+                )
+            ];
+
+        const x=i*14;
+        const y=drops[i]*14;
+
+        ctx.fillStyle=
+            Math.random()>.9
+            ? "#8ffff0"
+            : "#00a98f";
+
+        ctx.fillText(char,x,y);
+
+        if(y>canvas.height && Math.random()>.975){
+            drops[i]=0;
+        }
+
+        drops[i]+=.65;
+    }
+
+    requestAnimationFrame(matrix);
+}
+
+resize();
+matrix();
+
+addEventListener("resize",resize);
+
+
+/* TERMINAL */
+
+const terminal=
+    document.getElementById("terminal");
+
+function log(message,type=""){
+    const line=document.createElement("div");
+
+    line.className=type;
+
+    line.textContent=
+        "["+
+        new Date().toLocaleTimeString()+
+        "] "+message;
+
+    terminal.prepend(line);
+
+    while(terminal.children.length>7){
+        terminal.lastElementChild.remove();
+    }
+}
+
+
+/* SWITCHES */
+
+document.querySelectorAll(".switch")
+.forEach(sw=>{
+
+    sw.onclick=()=>{
+
+        const active=
+            sw.classList.toggle("active");
+
+        log(
+            sw.dataset.name+
+            " -> "+
+            (active?"ON":"OFF"),
+            active?"ok":"warn"
+        );
+    };
+});
+
+
+/* FOV */
+
+const range=
+    document.getElementById("range");
+
+const fov=
+    document.getElementById("fov");
+
+const fovValue=
+    document.getElementById("fovValue");
+
+function updateFov(){
+
+    const value=Number(range.value);
+
+    const size=
+        100+(value/360)*170;
+
+    fov.style.width=size+"px";
+    fov.style.height=size+"px";
+
+    fovValue.textContent=value+"°";
+}
+
+range.oninput=updateFov;
+updateFov();
+
+
+/* UI ACTIVATION */
+
+const activate=
+    document.getElementById("activate");
+
+let activated=false;
+
+activate.onclick=()=>{
+
+    activated=!activated;
+
+    activate.textContent=
+        activated
+        ? "✓ GIAO DIỆN ĐANG HOẠT ĐỘNG"
+        : "KÍCH HOẠT GIAO DIỆN";
+
+    activate.style.background=
+        activated
+        ? "#00ffd5"
+        : "#032824";
+
+    activate.style.color=
+        activated
+        ? "#00110e"
+        : "#00ffd5";
+
+    log(
+        activated
+        ? "Interface activated."
+        : "Interface disabled.",
+        activated?"ok":"warn"
+    );
+};
+
+
+/* OPEN FREE FIRE */
+
+document.getElementById("launch").onclick=()=>{
+
+    log("Opening Free Fire...", "ok");
+
+    /*
+      Trình duyệt iPhone chỉ cho phép mở app
+      nếu app đăng ký URL scheme tương ứng.
+    */
+
+    const schemes=[
+        "freefire://",
+        "freefireth://",
+        "freefiremax://"
+    ];
+
+    const scheme=schemes[0];
+
+    window.location.href=scheme;
+
+    setTimeout(()=>{
+
+        log(
+            "If Free Fire did not open, the browser/app does not expose a supported URL scheme.",
+            "warn"
+        );
+
+    },1500);
+};
+
+</script>
+
+</body>
+</html>
